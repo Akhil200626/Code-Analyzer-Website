@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CodeLens AI Pro — Fixed & Enhanced</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#080810;--surf0:#0d0d18;--surf1:#111120;--surf2:#161628;
+  --bdr:#1e1e35;--bdr2:#2a2a48;
+  --cyan:#00f5ff;--cyan2:#00bcd4;
+  --violet:#8b5cf6;--violet2:#6d28d9;
+  --rose:#ff4d6d;--amber:#ffb703;--lime:#39d353;
+  --txt:#dde4f0;--muted:#5a607a;--dim:#3a3f58;
+  --glow-c:rgba(0,245,255,.18);--glow-v:rgba(139,92,246,.18);
+  --r4:4px;--r6:6px;--r8:8px;--r12:12px;
+  --tr:.2s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;font-size:14px;display:flex;flex-direction:column;}
+
+#bg-canvas{position:fixed;inset:0;z-index:0;opacity:.35;pointer-events:none}
+
+
+.topbar{position:relative;z-index:100;height:52px;display:flex;align-items:center;gap:10px;padding:0 18px;background:rgba(8,8,16,.92);border-bottom:1px solid var(--bdr);backdrop-filter:blur(20px);flex-shrink:0;overflow-x:auto;}
+.logo{display:flex;align-items:center;gap:9px;margin-right:6px;flex-shrink:0}
+.logo-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--violet),var(--cyan));display:grid;place-items:center;font-size:14px;box-shadow:0 0 18px var(--glow-c);}
+.logo-name{font-size:16px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;}
+.logo-tag{font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--violet);background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);padding:2px 7px;border-radius:99px;white-space:nowrap;}
+.tb-sep{width:1px;height:20px;background:var(--bdr);flex-shrink:0;margin:0 2px}
+
+.lang-pill{display:flex;align-items:center;gap:6px;background:var(--surf1);border:1px solid var(--bdr2);border-radius:var(--r6);padding:5px 10px;transition:var(--tr);flex-shrink:0;}
+.lang-pill:hover{border-color:var(--cyan)}
+.lang-pill select{background:none;border:none;outline:none;cursor:pointer;color:var(--cyan);font-family:'Fira Code',monospace;font-size:12px;font-weight:500;-webkit-appearance:none;}
+.lang-pill select option{background:#0d0d18;color:var(--txt)}
+.lang-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
+
+.sample-btn{padding:4px 10px;border-radius:var(--r4);border:1px solid var(--bdr2);background:var(--surf1);color:var(--muted);font-family:'Fira Code',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:var(--tr);white-space:nowrap;}
+.sample-btn:hover{color:var(--amber);border-color:var(--amber);background:rgba(255,183,3,.07)}
+
+.btn-analyze{padding:6px 18px;border:none;border-radius:var(--r6);background:linear-gradient(135deg,var(--violet2),var(--cyan2));color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);box-shadow:0 0 20px rgba(0,245,255,.2);white-space:nowrap;flex-shrink:0;}
+.btn-analyze:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(0,245,255,.35)}
+.btn-clear{padding:5px 12px;border-radius:var(--r6);border:1px solid rgba(255,77,109,.35);background:rgba(255,77,109,.08);color:var(--rose);font-size:12px;font-weight:600;cursor:pointer;transition:var(--tr);white-space:nowrap;flex-shrink:0;}
+.btn-clear:hover{background:rgba(255,77,109,.16)}
+
+.ai-toggle{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:var(--r6);border:1px solid var(--bdr2);background:var(--surf1);cursor:pointer;transition:var(--tr);font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+.ai-toggle.on{border-color:var(--violet);background:rgba(139,92,246,.1);color:var(--violet)}
+.toggle-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);transition:var(--tr)}
+.ai-toggle.on .toggle-dot{background:var(--violet);box-shadow:0 0 6px var(--violet);animation:pulse 1.5s infinite}
+
+.detected{display:none;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-family:'Fira Code',monospace;font-size:11px;color:var(--lime);border:1px solid rgba(57,211,83,.25);background:rgba(57,211,83,.07);white-space:nowrap;}
+.detected.show{display:flex}
+
+.workspace{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:1fr 400px;overflow:hidden;}
+
+.editor-side{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bdr)}
+.file-tabs{height:34px;display:flex;align-items:center;background:var(--surf0);border-bottom:1px solid var(--bdr);padding:0 4px;gap:2px;flex-shrink:0;}
+.file-tab{display:flex;align-items:center;gap:6px;padding:0 12px;height:26px;border-radius:var(--r4);font-size:12px;font-family:'Fira Code',monospace;color:var(--muted);cursor:pointer;transition:var(--tr);white-space:nowrap;border:1px solid transparent;}
+.file-tab.active{background:var(--surf2);color:var(--txt);border-color:var(--bdr2)}
+.file-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan)}
+
+.editor-header{display:flex;align-items:center;justify-content:space-between;padding:5px 14px;background:var(--surf1);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.breadcrumb{font-family:'Fira Code',monospace;font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.breadcrumb span{color:var(--txt)}
+.editor-stats{display:flex;gap:10px;align-items:center}
+.stat-chip{font-family:'Fira Code',monospace;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.stat-chip b{color:var(--txt)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 2s infinite}
+
+.editor-container{flex:1;display:flex;overflow:hidden;position:relative}
+
+.gutter{width:52px;flex-shrink:0;padding:16px 0;font-family:'Fira Code',monospace;font-size:12px;line-height:1.65rem;color:var(--dim);text-align:right;background:var(--surf0);border-right:1px solid var(--bdr);overflow:hidden;user-select:none;cursor:default;}
+.gl{display:block;padding-right:8px;position:relative;transition:color .15s;line-height:1.65rem;}
+.gl.err{color:var(--rose)}.gl.wrn{color:var(--amber)}.gl.inf{color:var(--cyan2)}
+.gl-ico{position:absolute;left:2px;top:50%;transform:translateY(-50%);font-size:8px;line-height:1;}
+
+#code-editor{flex:1;padding:16px;font-family:'Fira Code',monospace;font-size:13px;line-height:1.65rem;background:transparent;color:var(--txt);border:none;outline:none;resize:none;tab-size:2;overflow:auto;caret-color:var(--cyan);white-space:pre;}
+
+
+.err-tooltip{position:absolute;z-index:200;background:#12121f;border:1px solid var(--bdr2);border-radius:var(--r8);padding:10px 14px;font-size:12px;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,.6);pointer-events:none;opacity:0;transition:opacity .15s;left:60px;}
+.err-tooltip.show{opacity:1}
+.ett-title{font-weight:700;margin-bottom:4px;color:var(--txt)}
+.ett-desc{color:var(--muted);line-height:1.5;font-size:11.5px}
+.ett-fix{margin-top:8px;padding:5px 9px;border-radius:var(--r4);background:rgba(57,211,83,.07);border:1px solid rgba(57,211,83,.2);color:var(--lime);font-size:11px;display:none;}
+
+
+.minimap{width:76px;flex-shrink:0;border-left:1px solid var(--bdr);overflow:hidden;background:var(--surf0);position:relative;cursor:pointer;}
+.minimap canvas{display:block;width:100%}
+.mm-vp{position:absolute;left:0;right:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);pointer-events:none;transition:top .05s;}
+
+
+.statusbar{height:22px;display:flex;align-items:center;gap:14px;padding:0 14px;background:linear-gradient(90deg,var(--violet2),var(--cyan2));flex-shrink:0;font-size:11px;font-weight:500;color:rgba(255,255,255,.88);}
+.sb-sep{opacity:.3}
+
+
+.ov-loading{position:absolute;inset:0;z-index:50;background:rgba(8,8,16,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.ov-loading.show{display:flex}
+.spin{width:34px;height:34px;border:2px solid var(--bdr2);border-top-color:var(--cyan);border-radius:50%;animation:spin .65s linear infinite;}
+.ov-txt{font-size:13px;color:var(--muted);font-weight:500}
+
+
+.analysis-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--surf0);}
+.panel-tabs{display:flex;border-bottom:1px solid var(--bdr);background:var(--surf0);flex-shrink:0;overflow-x:auto;}
+.ptab{padding:10px 12px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:var(--tr);white-space:nowrap;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.ptab.active{color:var(--cyan);border-color:var(--cyan)}
+.ptab:hover:not(.active){color:var(--txt)}
+.ptab .cnt{background:var(--bdr2);color:var(--muted);font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700;}
+.ptab.active .cnt{background:rgba(0,245,255,.15);color:var(--cyan)}
+.ptab.hot .cnt{background:rgba(255,77,109,.18);color:var(--rose)}
+
+.pcontent{display:none;flex:1;overflow-y:auto;flex-direction:column;gap:10px;padding:14px}
+.pcontent.active{display:flex}
+
+.score-card{background:var(--surf1);border:1px solid var(--bdr2);border-radius:var(--r12);padding:16px;display:flex;gap:14px;align-items:center;position:relative;overflow:hidden;flex-shrink:0;}
+.score-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(139,92,246,.07),transparent 60%);pointer-events:none;}
+.ring-wrap{position:relative;width:74px;height:74px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-num{position:absolute;inset:0;display:grid;place-items:center;font-family:'Fira Code',monospace;font-size:19px;font-weight:700;color:var(--lime);transition:color .4s;}
+.score-meta h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.score-meta p{font-size:12px;color:var(--muted);line-height:1.5}
+.grade{margin-top:7px;display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;border:1px solid;display:none;}
+
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{background:var(--surf1);border:1px solid var(--bdr);border-radius:var(--r8);padding:9px 11px;transition:border-color .2s;}
+.metric:hover{border-color:var(--bdr2)}
+.mlbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.mval{font-family:'Fira Code',monospace;font-size:17px;font-weight:700;line-height:1;color:var(--cyan)}
+.mval.ok{color:var(--lime)}.mval.warn{color:var(--amber)}.mval.bad{color:var(--rose)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid}
+.chip-e{color:var(--rose);border-color:rgba(255,77,109,.4);background:rgba(255,77,109,.08)}
+.chip-w{color:var(--amber);border-color:rgba(255,183,3,.4);background:rgba(255,183,3,.08)}
+.chip-i{color:var(--cyan);border-color:rgba(0,245,255,.3);background:rgba(0,245,255,.07)}
+.chip-g{color:var(--lime);border-color:rgba(57,211,83,.3);background:rgba(57,211,83,.07)}
+
+.predict-banner{background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(0,245,255,.06));border:1px solid rgba(139,92,246,.28);border-radius:var(--r8);padding:10px 13px;display:flex;align-items:flex-start;gap:10px;font-size:12px;flex-shrink:0;}
+.pb-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.pb-title{font-weight:700;color:var(--violet);margin-bottom:3px;font-size:13px}
+.pb-body{color:var(--muted);line-height:1.5}
+
+.pred-item{background:var(--surf1);border:1px solid var(--bdr);border-radius:var(--r8);overflow:hidden;animation:slideIn .3s ease;cursor:pointer;transition:border-color .2s,transform .15s;}
+.pred-item:hover{border-color:var(--violet);transform:translateX(2px)}
+.pi-head{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--bdr);}
+.pi-sev{width:5px;height:26px;border-radius:3px;flex-shrink:0}
+.pi-title{font-weight:700;font-size:12px;flex:1}
+.pi-conf{font-family:'Fira Code',monospace;font-size:10px;padding:2px 7px;border-radius:99px;border:1px solid;white-space:nowrap;}
+.pi-body{padding:9px 11px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.pi-loc{font-family:'Fira Code',monospace;font-size:11px;color:var(--cyan2);margin-top:5px;}
+.pi-fix{margin:0 11px 9px;padding:7px 10px;border-radius:var(--r6);background:rgba(57,211,83,.05);border:1px solid rgba(57,211,83,.15);font-size:11px;color:var(--lime);display:flex;gap:7px;align-items:flex-start;}
+.fi-ico{flex-shrink:0}
+
+.filter-row{display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0;}
+.fbtn{padding:3px 9px;border-radius:99px;border:1px solid var(--bdr);background:var(--surf1);font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:var(--tr);}
+.fbtn.fe{border-color:var(--rose);color:var(--rose);background:rgba(255,77,109,.08)}
+.fbtn.fw{border-color:var(--amber);color:var(--amber);background:rgba(255,183,3,.08)}
+.fbtn.fi{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,255,.07)}
+.fbtn.fg{border-color:var(--lime);color:var(--lime);background:rgba(57,211,83,.07)}
+
+.issue-item{background:var(--surf1);border:1px solid var(--bdr);border-radius:var(--r8);overflow:hidden;cursor:pointer;transition:border-color .2s;animation:slideIn .22s ease;}
+.issue-item:hover{border-color:var(--bdr2)}
+.issue-stripe{display:flex}
+.issue-bar{width:3px;flex-shrink:0}
+.issue-body{padding:8px 10px;flex:1}
+.iss-head{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.iss-ico{font-size:11px;flex-shrink:0}
+.iss-title{font-weight:700;font-size:12px;flex:1}
+.iss-ln{font-family:'Fira Code',monospace;font-size:10px;color:var(--muted)}
+.iss-desc{font-size:11.5px;color:var(--muted);line-height:1.4}
+.iss-fix{font-size:11px;color:var(--lime);margin-top:4px;display:flex;align-items:flex-start;gap:4px;line-height:1.4}
+
+.tree-hdr{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--bdr);margin-bottom:5px}
+.tnode{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:var(--r4);cursor:pointer;font-family:'Fira Code',monospace;font-size:12px;transition:background .12s;}
+.tnode:hover{background:rgba(0,245,255,.05)}
+.tnode.ind{margin-left:16px;border-left:1px solid var(--bdr);padding-left:10px}
+.tnode-ico{font-size:12px;width:15px;text-align:center;flex-shrink:0}
+.tnode-name{color:var(--txt);flex:1}
+.ttag{padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700}
+.tg-fn{background:rgba(139,92,246,.15);color:#a78bfa}
+.tg-cls{background:rgba(0,245,255,.08);color:var(--cyan)}
+.tg-imp{background:rgba(255,183,3,.1);color:var(--amber)}
+
+
+.cx-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cx-card{background:var(--surf1);border:1px solid var(--bdr);border-radius:var(--r8);padding:12px;}
+.cxlbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:5px}
+.cxval{font-family:'Fira Code',monospace;font-size:28px;font-weight:700;line-height:1}
+.cxsub{font-size:11px;color:var(--muted);margin-top:3px}
+.cxbar-wrap{height:5px;background:var(--bdr);border-radius:3px;margin-top:9px;overflow:hidden}
+.cxbar{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);text-align:center;padding:28px;font-size:12px;line-height:1.6;}
+.empty-ico{font-size:30px;opacity:.2}
+
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+
+@media(max-width:900px){
+  .workspace{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  .minimap{display:none}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">⚡</div>
+    <span class="logo-name">CodeLens</span>
+    <span class="logo-tag">AI Pro</span>
+  </div>
+  <div class="tb-sep"></div>
+
+  <div class="lang-pill">
+    <span class="lang-lbl">Lang</span>
+    <select id="lang-select">
+      <option value="auto">🔍 Auto-Detect</option>
+      <optgroup label="── Web ──">
+        <option value="javascript">JavaScript</option>
+        <option value="typescript">TypeScript</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="json">JSON</option>
+      </optgroup>
+      <optgroup label="── Backend ──">
+        <option value="python">Python</option>
+        <option value="java">Java</option>
+        <option value="csharp">C#</option>
+        <option value="cpp">C++</option>
+        <option value="c">C</option>
+        <option value="go">Go</option>
+        <option value="rust">Rust</option>
+        <option value="php">PHP</option>
+        <option value="ruby">Ruby</option>
+        <option value="kotlin">Kotlin</option>
+        <option value="swift">Swift</option>
+        <option value="scala">Scala</option>
+        <option value="dart">Dart</option>
+        <option value="lua">Lua</option>
+        <option value="haskell">Haskell</option>
+        <option value="elixir">Elixir</option>
+      </optgroup>
+      <optgroup label="── Data / Systems ──">
+        <option value="sql">SQL</option>
+        <option value="bash">Bash / Shell</option>
+        <option value="powershell">PowerShell</option>
+        <option value="yaml">YAML</option>
+        <option value="xml">XML</option>
+        <option value="toml">TOML</option>
+        <option value="graphql">GraphQL</option>
+        <option value="r">R</option>
+        <option value="assembly">Assembly</option>
+        <option value="dockerfile">Dockerfile</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div id="detected-badge" class="detected">🔍 <span id="detected-text">auto</span></div>
+  <div class="tb-sep"></div>
+
+  <span class="lang-lbl">Samples</span>
+  <button class="sample-btn" id="s-js">JS</button>
+  <button class="sample-btn" id="s-py">Py</button>
+  <button class="sample-btn" id="s-java">Java</button>
+  <button class="sample-btn" id="s-cpp">C++</button>
+  <button class="sample-btn" id="s-sql">SQL</button>
+  <button class="sample-btn" id="s-go">Go</button>
+
+  <div class="tb-sep"></div>
+  <div class="ai-toggle on" id="ai-toggle">
+    <div class="toggle-dot"></div>AI Predict
+  </div>
+  <button class="btn-clear" id="btn-clear">✕ Clear</button>
+  <button class="btn-analyze" id="btn-analyze">⚡ Analyze</button>
+</div>
+
+
+<div class="workspace">
+
+
+  <div class="editor-side">
+    <div class="file-tabs">
+      <div class="file-tab active" id="file-tab-name"><div class="file-dot"></div>main.js</div>
+    </div>
+    <div class="editor-header">
+      <div class="breadcrumb">
+        <span>project</span> / <span>src</span> / <span id="crumb-file">main.js</span>
+      </div>
+      <div class="editor-stats">
+        <div class="stat-chip"><div class="live-dot"></div>Live</div>
+        <div class="stat-chip">Ln <b id="stat-ln">1</b></div>
+        <div class="stat-chip">Col <b id="stat-col">1</b></div>
+        <div class="stat-chip">UTF-8</div>
+      </div>
+    </div>
+
+    <div class="editor-container" id="editor-container">
+      <div class="gutter" id="gutter"></div>
+      <textarea id="code-editor" spellcheck="false"
+        placeholder="// Paste any code here — CodeLens AI analyzes, detects bugs,&#10;// predicts errors, and suggests fixes in real time.&#10;// Supports 40+ languages. Click a sample to get started!"></textarea>
+      <div class="minimap" id="minimap">
+        <canvas id="mm-canvas"></canvas>
+        <div class="mm-vp" id="mm-vp"></div>
+      </div>
+      <div class="ov-loading" id="ov-loading">
+        <div class="spin"></div>
+        <div class="ov-txt">AI analyzing code…</div>
+      </div>
+      <div class="err-tooltip" id="err-tooltip">
+        <div class="ett-title" id="ett-t"></div>
+        <div class="ett-desc" id="ett-d"></div>
+        <div class="ett-fix" id="ett-f"></div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span>⚡ CodeLens AI</span>
+      <span class="sb-sep">|</span>
+      <span id="sb-lang">—</span>
+      <span class="sb-sep">|</span>
+      <span id="sb-issues">0 issues</span>
+      <span class="sb-sep">|</span>
+      <span id="sb-score">Score: —</span>
+      <span class="sb-sep">|</span>
+      <span id="sb-loc">0 lines</span>
+    </div>
+  </div>
+
+  <div class="analysis-panel">
+    <div class="panel-tabs">
+      <div class="ptab active" data-p="overview">Overview</div>
+      <div class="ptab" data-p="predict" id="ptab-predict">🧠 AI Predict <span class="cnt" id="pred-cnt">0</span></div>
+      <div class="ptab" data-p="issues" id="ptab-issues">Issues <span class="cnt" id="iss-cnt">0</span></div>
+      <div class="ptab" data-p="structure">Structure</div>
+      <div class="ptab" data-p="complexity">Complexity</div>
+    </div>
+
+    
+    <div class="pcontent active" id="pc-overview">
+      <div class="score-card">
+        <div class="ring-wrap">
+          <svg width="74" height="74" viewBox="0 0 74 74">
+            <circle cx="37" cy="37" r="31" fill="none" stroke="#1e1e35" stroke-width="5"/>
+            <circle id="ring-fill" cx="37" cy="37" r="31" fill="none" stroke="#39d353" stroke-width="5"
+              stroke-dasharray="194.8" stroke-dashoffset="194.8" stroke-linecap="round"
+              style="transition:stroke-dashoffset .9s ease,stroke .4s"/>
+          </svg>
+          <div class="ring-num" id="ring-num">—</div>
+        </div>
+        <div class="score-meta">
+          <h3>Code Quality Score</h3>
+          <p id="score-desc">Paste code to begin analysis.</p>
+          <div class="grade" id="score-grade"></div>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="mlbl">Lines</div><div class="mval" id="m-loc">—</div></div>
+        <div class="metric"><div class="mlbl">Functions</div><div class="mval" id="m-fn">—</div></div>
+        <div class="metric"><div class="mlbl">Classes</div><div class="mval" id="m-cls">—</div></div>
+        <div class="metric"><div class="mlbl">Comments</div><div class="mval" id="m-cmt">—</div></div>
+        <div class="metric"><div class="mlbl">Imports</div><div class="mval" id="m-imp">—</div></div>
+        <div class="metric"><div class="mlbl">Blank Lines</div><div class="mval" id="m-blank">—</div></div>
+        <div class="metric"><div class="mlbl">Avg Line Len</div><div class="mval" id="m-avg">—</div></div>
+        <div class="metric"><div class="mlbl">Max Nesting</div><div class="mval" id="m-nest">—</div></div>
+      </div>
+      <div class="chips" id="summary-chips"></div>
+    </div>
+
+    <div class="pcontent" id="pc-predict">
+      <div class="predict-banner">
+        <div class="pb-icon">🧠</div>
+        <div>
+          <div class="pb-title">AI Error Prediction Engine</div>
+          <div class="pb-body">Analyzes 50+ bug patterns. Predicts runtime errors, logic flaws, and security issues before they happen.</div>
+        </div>
+      </div>
+      <div id="predictions-list">
+        <div class="empty"><div class="empty-ico">🔮</div><p>Run analysis to see<br/>AI-predicted errors</p></div>
+      </div>
+    </div>
+
+  
+    <div class="pcontent" id="pc-issues">
+      <div class="filter-row" id="filter-row"></div>
+      <div id="issues-list">
+        <div class="empty"><div class="empty-ico">🔍</div><p>No issues yet</p></div>
+      </div>
+    </div>
+
+    <div class="pcontent" id="pc-structure">
+      <div id="structure-tree">
+        <div class="empty"><div class="empty-ico">🌲</div><p>Structure appears after analysis</p></div>
+      </div>
+    </div>
+
+   
+    <div class="pcontent" id="pc-complexity">
+      <div id="complexity-content">
+        <div class="empty"><div class="empty-ico">📊</div><p>Complexity data appears after analysis</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+(function(){
+  const cvs = document.getElementById('bg-canvas');
+  const ctx = cvs.getContext('2d');
+  let W, H, pts = [];
+
+  function resize() {
+    W = cvs.width  = window.innerWidth;
+    H = cvs.height = window.innerHeight;
+    pts = Array.from({length: 55}, function() {
+      return {
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - .5) * .28, vy: (Math.random() - .5) * .28,
+        r: Math.random() * 1.4 + .4
+      };
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,245,255,.5)'; ctx.fill();
+      for (var j = i + 1; j < pts.length; j++) {
+        var q = pts[j], dx = p.x - q.x, dy = p.y - q.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 110) {
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = 'rgba(139,92,246,' + (.11 * (1 - d / 110)) + ')';
+          ctx.lineWidth = .5; ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize(); draw();
+})();
+
+var SAMPLES = {
+js: `// E-commerce cart — JavaScript (intentional bugs for demo)
+import { EventEmitter } from './events.js';
+
+class ShoppingCart extends EventEmitter {
+  constructor(userId) {
+    super();
+    this.userId   = userId;
+    this.items    = [];
+    this.discount = 0;
+  }
+
+  addItem(product, qty = 1) {
+    const found = this.items.find(i => i.id == product.id); // loose equality!
+    if (found) { found.qty += qty; }
+    else { this.items.push({...product, qty}); }
+    this.emit('change', this.items);
+    return this;
+  }
+
+  removeItem(id) {
+    this.items = this.items.filter(i => i.id !== id);
+  }
+
+  get total() {
+    return this.items.reduce((s, i) => s + i.price * i.qty, 0) * (1 - this.discount);
+  }
+
+  async checkout(paymentMethod) {
+    if (!this.items.length) throw new Error('Cart empty');
+    try {
+      const res  = await fetch('/api/orders', {
+        method: 'POST',
+        body:   JSON.stringify({ userId: this.userId, items: this.items, paymentMethod })
+      });
+      const data = await res.json();
+      this.items = [];
+      return data;
+    } catch (e) {
+      console.log(e); // should use structured logging
+    }
+    // BUG: missing return — undefined returned after catch
+  }
+
+  applyDiscount(code) {
+    var CODES = { 'SAVE10': .10, 'SAVE20': .20 }; // var keyword!
+    this.discount = CODES[code] || 0;
+  }
+}
+
+function getFirstItem(cart) {
+  return cart.items[0].name; // NPE if items is empty!
+}
+
+var secret_key = "sk_live_abc123def456"; // hardcoded API key!
+setTimeout(function() { console.log('tick') }, 0);
+
+export default ShoppingCart;`,
+
+py: `# ML pipeline — Python (intentional bugs for demo)
+import os, sys, json
+import numpy as np
+from typing import List, Dict, Tuple
+
+class ModelTrainer:
+    """Trains and evaluates ML models."""
+    LEARNING_RATE = 0.001
+    MAX_EPOCHS    = 100
+
+    def __init__(self, model_name: str, config: Dict):
+        self.model_name = model_name
+        self.config     = config
+        self.model      = None
+        self.api_key    = "sk-1234abcd-secret"  # hardcoded!
+
+    def preprocess(self, X: np.ndarray) -> np.ndarray:
+        mean = X.mean(axis=0)
+        std  = X.std(axis=0)
+        return (X - mean) / std  # BUG: std could be 0!
+
+    def train(self, X, y, epochs=None):
+        epochs = epochs or self.MAX_EPOCHS
+        for epoch in range(epochs):
+            loss = self._forward(X, y)
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch}: loss={loss}")  # use logging
+
+    def _forward(self, X, y):
+        # TODO: implement forward pass
+        pass  # unimplemented!
+
+    def predict(self, X):
+        if self.model is None:
+            return None  # silent failure — should raise!
+        return self.model.predict(X)
+
+    def evaluate(self, X, y):
+        preds = self.predict(X)
+        accuracy = (preds == y).mean()  # NPE if preds is None!
+        return accuracy
+
+password = "admin123"   # hardcoded credential!
+DEBUG_MODE = True`,
+
+java: `// Banking service — Java (intentional bugs for demo)
+package com.bank.service;
+import java.util.*;
+import java.math.BigDecimal;
+
+public class AccountService {
+    private static final Map<String,BigDecimal> accounts = new HashMap<>(); // not thread-safe!
+    private static String DB_PASSWORD = "root1234"; // hardcoded!
+
+    public static void deposit(String accountId, double amount) { // double for money = bug!
+        BigDecimal cur = accounts.getOrDefault(accountId, BigDecimal.ZERO);
+        accounts.put(accountId, cur.add(BigDecimal.valueOf(amount)));
+        System.out.println("Deposited: " + amount); // debug in prod!
+    }
+
+    public static boolean withdraw(String accountId, double amount) {
+        BigDecimal cur = accounts.get(accountId); // NPE if missing!
+        if (cur.compareTo(BigDecimal.valueOf(amount)) < 0) return false;
+        accounts.put(accountId, cur.subtract(BigDecimal.valueOf(amount)));
+        return true;
+    }
+
+    public static BigDecimal transfer(String from, String to, double amount) {
+        // RACE CONDITION: not atomic!
+        if (!withdraw(from, amount)) return null;
+        deposit(to, amount);
+        return accounts.get(to);
+    }
+
+    public static String getStatement(String id) {
+        return "SELECT * FROM txns WHERE account='" + id + "'"; // SQL injection!
+    }
+
+    public void processAll(List<String> ids) {
+        for (int i = 0; i <= ids.size(); i++) { // off-by-one!
+            System.out.println(ids.get(i));
+        }
+    }
+    // TODO: add transaction rollback
+    // TODO: implement audit logging
+}`,
+
+cpp: `// Memory manager — C++ (intentional bugs for demo)
+#include <iostream>
+#include <cstring>
+
+class Buffer {
+    char*  data;
+    size_t size;
+public:
+    Buffer(size_t n) : size(n) {
+        data = new char[n]; // raw new — prefer smart ptrs
+    }
+    ~Buffer() { delete[] data; }
+    // Missing copy constructor — Rule of Three violation!
+
+    void write(const char* src, size_t len) {
+        memcpy(data, src, len); // no bounds check!
+    }
+    char read(int idx) {
+        return data[idx]; // no bounds check!
+    }
+};
+
+int* leakyFunc() {
+    int* p = new int(42); // never freed!
+    return p;
+}
+
+void dangerousStr(const char* input) {
+    char buf[64];
+    strcpy(buf, input); // buffer overflow!
+}
+
+int* danglePointer() {
+    int x = 99;
+    return &x; // dangling pointer!
+}
+
+int main() {
+    Buffer b1(100);
+    Buffer b2 = b1; // shallow copy — double-free!
+    char big[200]; memset(big, 'A', 199); big[199] = 0;
+    dangerousStr(big); // overflow!
+    int* p = leakyFunc(); // leak
+    int* bad = danglePointer();
+    std::cout << *bad << std::endl; // UB!
+    return 0;
+}`,
+
+sql: `-- User analytics — SQL (intentional issues for demo)
+CREATE TABLE users (
+    user_id    INT PRIMARY KEY AUTO_INCREMENT,
+    email      VARCHAR(255) NOT NULL,    -- missing UNIQUE!
+    username   VARCHAR(50),              -- missing NOT NULL
+    password   VARCHAR(32),             -- MD5 length = weak hash!
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sessions (
+    session_id VARCHAR(36) PRIMARY KEY,
+    user_id    INT,                      -- missing FOREIGN KEY!
+    token      TEXT,                     -- should be VARCHAR + index
+    expires_at TIMESTAMP,
+    ip_address VARCHAR(15)              -- IPv6 needs VARCHAR(45)!
+);
+
+-- N+1 query pattern: for each user fetch sessions separately
+SELECT * FROM users;
+
+-- Full table scan — no index on email!
+SELECT * FROM users WHERE email = 'test@example.com';
+
+-- SELECT * anti-pattern
+SELECT * FROM sessions WHERE expires_at > NOW();
+
+-- Missing transaction
+UPDATE users SET last_login = NOW() WHERE user_id = 1;
+INSERT INTO sessions (session_id, user_id, token, expires_at)
+VALUES (UUID(), 1, 'abc123', DATE_ADD(NOW(), INTERVAL 7 DAY));
+
+-- Cartesian join (accidental cross join)!
+SELECT u.email, s.token FROM users u, sessions s WHERE u.user_id = 1;`,
+
+go: `// Web scraper — Go (intentional bugs for demo)
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    "net/http"
+    "sync"
+)
+
+var globalCounter int // race condition!
+var apiKey = "gk_live_supersecret123" // hardcoded!
+
+type Scraper struct {
+    client  *http.Client
+    results []string
+    mu      sync.Mutex
+}
+
+func NewScraper() *Scraper {
+    return &Scraper{
+        client: &http.Client{}, // no timeout!
+    }
+}
+
+func (s *Scraper) Fetch(url string) (string, error) {
+    resp, err := s.client.Get(url)
+    if err != nil { return "", err }
+    // missing: defer resp.Body.Close() — resource leak!
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil { return "", err }
+    return string(body), nil
+}
+
+func (s *Scraper) FetchAll(urls []string) {
+    var wg sync.WaitGroup
+    for _, url := range urls {
+        wg.Add(1)
+        go func() { // goroutine capture bug!
+            defer wg.Done()
+            result, err := s.Fetch(url)
+            if err != nil { fmt.Println(err); return }
+            s.results = append(s.results, result) // race!
+            globalCounter++ // race!
+        }()
+    }
+    wg.Wait()
+}
+
+func divide(a, b int) int {
+    return a / b // panic if b==0!
+}
+
+func main() {
+    s := NewScraper()
+    s.FetchAll([]string{"https://example.com"})
+    fmt.Println(divide(10, 0)) // will panic!
+}`
+};
+
+var LANG_PATTERNS = {
+  python:     [/^\s*def\s+\w+\s*\(/m, /^\s*import\s+\w/m, /from\s+\w+\s+import/m, /:\s*$/m, /@\w+/m, /f"[^"]*"/m],
+  java:       [/public\s+(class|interface|enum)\s+\w/m, /System\.out\.(print|println)/m, /import\s+java\./m, /public\s+static\s+void\s+main/m],
+  cpp:        [/#include\s*<[^>]+>/m, /std::/m, /cout\s*<</m, /nullptr/m, /template\s*</m],
+  c:          [/#include\s*<[^>]+\.h>/m, /\bprintf\s*\(/m, /\bint\s+main\s*\(/m, /\bmalloc\s*\(/m],
+  javascript: [/\bconst\s+\w+\s*=/m, /\blet\s+\w/m, /=>\s*[{(]/m, /import\s+.*from/m, /console\./m, /async\s+function/m],
+  typescript: [/:\s*(string|number|boolean|void|any|never)\b/m, /interface\s+\w/m, /type\s+\w+\s*=/m, /<[A-Z]\w*>/m],
+  go:         [/\bfunc\s+\w+\s*\(/m, /\bpackage\s+\w/m, /import\s+"[^"]+"/m, /:=\s*/m, /fmt\.\w+\s*\(/m],
+  rust:       [/\bfn\s+\w+\s*\(/m, /\blet\s+mut\s/m, /\bimpl\s+\w/m, /use\s+std::/m, /\bOption</m],
+  csharp:     [/using\s+System/m, /namespace\s+\w/m, /Console\.(Write|Read)/m, /public\s+(class|interface)\s+\w/m],
+  php:        [/<\?php/m, /\$\w+\s*=/m, /\becho\s/m, /->/m],
+  ruby:       [/\bdef\s+\w/m, /\bend\b/m, /require\s+['"][^'"]+['"]/m, /puts\s/m],
+  swift:      [/\bfunc\s+\w/m, /import\s+(Foundation|UIKit|SwiftUI)/m, /guard\s+let/m],
+  kotlin:     [/\bfun\s+\w/m, /val\s+\w+\s*=/m, /data\s+class\s+\w/m, /println\s*\(/m],
+  sql:        [/\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP)\b/i, /\bFROM\b/i, /\bWHERE\b/i],
+  html:       [/<html/i, /<div/i, /<script/i, /<!DOCTYPE/i],
+  css:        [/\{[^}]*:\s*[^;]+;/m, /@media/m, /\.[\w-]+\s*\{/m],
+  bash:       [/^#!/m, /\$\([^)]+\)/m, /\bfi\b/m, /\becho\s/m],
+  yaml:       [/^---/m, /^\w[\w-]*:/m, /^\s+-\s+\w/m],
+  json:       [/^\s*\{/, /"[\w-]+":\s*("|[\d\[{])/m]
+};
+
+function detectLang(code) {
+  if (!code.trim()) return null;
+  var entries = Object.keys(LANG_PATTERNS);
+  var best = 'text', bestScore = 0;
+  for (var i = 0; i < entries.length; i++) {
+    var lang = entries[i];
+    var tests = LANG_PATTERNS[lang];
+    var score = 0;
+    for (var j = 0; j < tests.length; j++) {
+      if (tests[j].test(code)) score++;
+    }
+    if (score > bestScore) { bestScore = score; best = lang; }
+  }
+  return bestScore > 0 ? best : 'text';
+}
+
+var LANG_RULES = {
+  javascript: {
+    fn:  [/function\s+(\w+)\s*\(/gm, /const\s+(\w+)\s*=\s*(?:async\s*)?\(.*?\)\s*=>/gm, /(?:async\s+)?(\w+)\s*\([^)]*\)\s*\{/gm],
+    cls: [/class\s+(\w+)/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/import\s+.*?from\s+['"][^'"]+['"]/gm, /require\s*\(\s*['"][^'"]+['"]\s*\)/gm]
+  },
+  typescript: {
+    fn:  [/function\s+(\w+)/gm, /(?:async\s+)?(\w+)\s*\([^)]*\):\s*\w/gm],
+    cls: [/class\s+(\w+)/gm, /interface\s+(\w+)/gm, /type\s+(\w+)\s*=/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/import\s+.*?from\s+['"][^'"]+['"]/gm]
+  },
+  python: {
+    fn:  [/^\s*def\s+(\w+)\s*\(/gm],
+    cls: [/^\s*class\s+(\w+)/gm],
+    cmt: [/^\s*#/gm],
+    imp: [/^\s*import\s+(\S+)/gm, /^\s*from\s+(\S+)\s+import/gm]
+  },
+  java: {
+    fn:  [/(?:public|private|protected|static|void|int|String|boolean)\s+(\w+)\s*\([^)]*\)\s*(?:throws[^{]*)?\s*\{/gm],
+    cls: [/(?:public|private|protected)\s+(?:abstract\s+)?(?:class|interface|enum)\s+(\w+)/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/import\s+[\w.]+;/gm]
+  },
+  cpp: {
+    fn:  [/\b(\w+)\s*\([^)]*\)\s*(?:const\s*)?\{/gm],
+    cls: [/(?:class|struct)\s+(\w+)/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/#include\s*[<"][^>"]+[>"]/gm]
+  },
+  c: {
+    fn:  [/\b(\w+)\s*\([^)]*\)\s*\{/gm],
+    cls: [/struct\s+(\w+)/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/#include\s*[<"][^>"]+[>"]/gm]
+  },
+  go: {
+    fn:  [/func\s+(?:\(\w+\s+\*?\w+\)\s+)?(\w+)\s*\(/gm],
+    cls: [/type\s+(\w+)\s+struct/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/import\s+"[^"]+"/gm]
+  },
+  rust: {
+    fn:  [/fn\s+(\w+)\s*(?:<[^>]*>)?\s*\(/gm],
+    cls: [/(?:struct|impl|trait|enum)\s+(\w+)/gm],
+    cmt: [/^\s*\/\//gm],
+    imp: [/use\s+[\w:]+/gm]
+  },
+  sql: {
+    fn:  [/CREATE\s+(?:FUNCTION|PROCEDURE)\s+(\w+)/gi],
+    cls: [/CREATE\s+TABLE\s+(\w+)/gi],
+    cmt: [/^\s*--/gm],
+    imp: []
+  },
+  'default': {
+    fn:  [/function\s+(\w+)/gm, /def\s+(\w+)/gm],
+    cls: [/class\s+(\w+)/gm],
+    cmt: [/^\s*[#\/]/gm],
+    imp: [/import\s+/gm]
+  }
+};
+
+function extractNames(code, patterns) {
+  var names = [];
+  for (var i = 0; i < patterns.length; i++) {
+    var r = new RegExp(patterns[i].source, patterns[i].flags);
+    var m;
+    while ((m = r.exec(code)) !== null) {
+      if (m[1] && names.indexOf(m[1]) === -1) names.push(m[1]);
+    }
+  }
+  return names;
+}
+
+function countMatches(code, patterns) {
+  var total = 0;
+  for (var i = 0; i < patterns.length; i++) {
+    var r = new RegExp(patterns[i].source, patterns[i].flags);
+    var m;
+    while ((m = r.exec(code)) !== null) total++;
+  }
+  return total;
+}
+
+function lineOf(code, idx) {
+  return code.substring(0, idx).split('\n').length;
+}
+
+function analyzeCode(code, lang) {
+  var lines    = code.split('\n');
+  var nonBlank = lines.filter(function(l) { return l.trim().length > 0; });
+  var blank    = lines.length - nonBlank.length;
+  var avgLen   = nonBlank.length
+    ? Math.round(nonBlank.reduce(function(s, l) { return s + l.length; }, 0) / nonBlank.length)
+    : 0;
+
+  var cfg = LANG_RULES[lang] || LANG_RULES['default'];
+  var fnNames  = extractNames(code, cfg.fn);
+  var clsNames = extractNames(code, cfg.cls);
+  var cmtCount = countMatches(code, cfg.cmt);
+  var impCount = countMatches(code, cfg.imp);
+
+ 
+  var maxD = 0, d = 0;
+  for (var ci = 0; ci < code.length; ci++) {
+    var ch = code[ci];
+    if (ch === '{' || ch === '(') { d++; if (d > maxD) maxD = d; }
+    else if (ch === '}' || ch === ')') d = Math.max(0, d - 1);
+  }
+  maxD = Math.min(maxD, 15);
+
+  
+  var cyclo = 1;
+  var cpRe = /\b(if|else\s+if|for|while|switch|case|catch|&&|\|\|)\b/g;
+  var cm;
+  while ((cm = cpRe.exec(code)) !== null) cyclo++;
+
+  var issues = [];
+
+  
+  for (var li = 0; li < lines.length; li++) {
+    if (lines[li].length > 120) {
+      issues.push({ type:'warn', title:'Line too long', line: li+1,
+        desc: 'Line ' + (li+1) + ' is ' + lines[li].length + ' chars (max 120). Break it up.',
+        fix:  'Split into multiple lines or extract variables.' });
+    }
+  }
+
+  var dbgPats = {
+    javascript: /console\.(log|warn|debug|error)\s*\(/g,
+    typescript: /console\.(log|warn|debug)\s*\(/g,
+    python:     /\bprint\s*\(/g,
+    java:       /System\.out\.println?/g,
+    cpp:        /\bcout\s*<</g,
+    c:          /\bprintf\s*\(/g,
+    go:         /fmt\.(Print|Println|Printf)\s*\(/g
+  };
+  if (dbgPats[lang]) {
+    var dp = new RegExp(dbgPats[lang].source, 'g'), dm;
+    while ((dm = dp.exec(code)) !== null) {
+      issues.push({ type:'info', title:'Debug output', line: lineOf(code, dm.index),
+        desc: 'Remove debug logging before production.',
+        fix:  'Use a structured logger (e.g. winston, log4j, slog).' });
+    }
+  }
+
+  var secRe = /(?:password|secret|api_?key|token|apikey|auth_token|db_pass)\s*[=:]\s*["'][^"']{4,}["']/gi;
+  var sm;
+  while ((sm = secRe.exec(code)) !== null) {
+    issues.push({ type:'error', title:'Hardcoded credential', line: lineOf(code, sm.index),
+      desc: 'Secret detected: "' + sm[0].substring(0, 44) + '…"',
+      fix:  'Move to environment variables or a secrets manager.' });
+  }
+
+  var tdRe = /\b(TODO|FIXME|HACK|XXX|BUG)\b/g, tm;
+  while ((tm = tdRe.exec(code)) !== null) {
+    issues.push({ type:'warn', title: tm[1] + ' comment', line: lineOf(code, tm.index),
+      desc: 'Action item found — track it in your issue tracker.',
+      fix:  'Create a ticket and link it: // TODO(#123)' });
+  }
+
+  if (lang === 'javascript' || lang === 'typescript') {
+    var vRe = /\bvar\s+\w+/g, vm;
+    while ((vm = vRe.exec(code)) !== null) {
+      issues.push({ type:'warn', title:'var keyword', line: lineOf(code, vm.index),
+        desc: 'var uses function-scoped hoisting and can cause subtle bugs.',
+        fix:  'Replace with const or let.' });
+    }
+  }
+
+  if (lang === 'javascript' || lang === 'typescript') {
+    var leRe = /[^=!]==[^=]|[^=!]!=[^=]/g, lem;
+    while ((lem = leRe.exec(code)) !== null) {
+      issues.push({ type:'warn', title:'Loose equality', line: lineOf(code, lem.index),
+        desc: '== coerces types — use === for strict equality.',
+        fix:  'Replace == with === and != with !==' });
+    }
+  }
+
+  if (lang === 'cpp' || lang === 'c') {
+    var dpRe = /return\s+&[a-zA-Z_]\w*/g, dpm;
+    while ((dpm = dpRe.exec(code)) !== null) {
+      issues.push({ type:'error', title:'Dangling pointer', line: lineOf(code, dpm.index),
+        desc: 'Returning address of a local variable — undefined behavior.',
+        fix:  'Return by value or allocate on the heap.' });
+    }
+  }
+
+  if (lang === 'cpp' || lang === 'c') {
+    var boRe = /\bstrcpy\s*\(/g, bom;
+    while ((bom = boRe.exec(code)) !== null) {
+      issues.push({ type:'error', title:'Unsafe strcpy()', line: lineOf(code, bom.index),
+        desc: 'strcpy() has no bounds check — classic buffer overflow.',
+        fix:  'Use strncpy(), strlcpy(), or std::string.' });
+    }
+  }
+
+  if (lang === 'cpp') {
+    var npRe = /\bnew\s+\w+/g, npm;
+    while ((npm = npRe.exec(code)) !== null) {
+      issues.push({ type:'warn', title:'Raw new allocation', line: lineOf(code, npm.index),
+        desc: 'Manual memory management is error-prone.',
+        fix:  'Use std::make_unique<> or std::make_shared<>.' });
+    }
+  }
+
+  var ecRe = /catch\s*\([^)]*\)\s*\{\s*\}/g, ecm;
+  while ((ecm = ecRe.exec(code)) !== null) {
+    issues.push({ type:'warn', title:'Empty catch block', line: lineOf(code, ecm.index),
+      desc: 'Silently swallows exceptions.',
+      fix:  'Log and/or rethrow: catch(e){ logger.error(e); throw e; }' });
+  }
+
+  if (lang === 'go') {
+    if (/go\s+func\s*\(\s*\)/.test(code) && /for\s+.*range/.test(code)) {
+      issues.push({ type:'error', title:'Goroutine variable capture', line: 1,
+        desc: 'Loop variable captured by closure references the final value, not each iteration value.',
+        fix:  'Pass variable as parameter: go func(u string){ ... }(url)' });
+    }
+  }
+
+  if (lang === 'go' && /\.Get\s*\(/.test(code) && !/defer\s+resp\.Body\.Close/.test(code)) {
+    issues.push({ type:'error', title:'Missing defer resp.Body.Close()', line: 1,
+      desc: 'HTTP response body leaks if not closed.',
+      fix:  'Add immediately after nil check: defer resp.Body.Close()' });
+  }
+
+  if (lang === 'go' && /http\.Client\s*\{\s*\}/.test(code)) {
+    issues.push({ type:'warn', title:'HTTP client has no timeout', line: 1,
+      desc: 'Requests can hang indefinitely, leaking goroutines.',
+      fix:  '&http.Client{Timeout: 30 * time.Second}' });
+  }
+
+  if (lang === 'python') {
+    for (var pdi = 0; pdi < lines.length; pdi++) {
+      var l = lines[pdi];
+      if (l.includes('/') && !l.trim().startsWith('#') && /\/\s*\w+/.test(l) && !l.includes('//')) {
+        issues.push({ type:'warn', title:'Possible division by zero', line: pdi + 1,
+          desc: 'Divisor could be zero at runtime.',
+          fix:  'Validate before dividing: if denom != 0: result = num / denom' });
+        break;
+      }
+    }
+  }
+
+  if (['sql','javascript','python','java','php'].indexOf(lang) !== -1) {
+    var siRe = /["']\s*\+\s*\w+|%s['"]/g, sim;
+    while ((sim = siRe.exec(code)) !== null) {
+      issues.push({ type:'error', title:'SQL injection risk', line: lineOf(code, sim.index),
+        desc: 'String concatenation in queries enables injection attacks.',
+        fix:  'Use parameterized queries or prepared statements.' });
+    }
+  }
+
+  if (lang === 'sql') {
+    var ssRe = /SELECT\s+\*/gi, ssm;
+    while ((ssm = ssRe.exec(code)) !== null) {
+      issues.push({ type:'info', title:'SELECT * anti-pattern', line: lineOf(code, ssm.index),
+        desc: 'Selecting all columns is wasteful and schema-fragile.',
+        fix:  'List required columns: SELECT id, email FROM ...' });
+    }
+  }
+
+  if (lang === 'sql') {
+    if (/missing\s+UNIQUE/i.test(code) || /missing\s+FOREIGN/i.test(code)) {
+      issues.push({ type:'warn', title:'Missing constraint hint', line: 1,
+        desc: 'Comment suggests missing UNIQUE or FOREIGN KEY constraint.',
+        fix:  'Add UNIQUE(email) and FOREIGN KEY(user_id) REFERENCES users(user_id).' });
+    }
+  }
+
+  if (lang === 'java' && /new\s+HashMap/.test(code)) {
+    issues.push({ type:'warn', title:'HashMap not thread-safe', line: 1,
+      desc: 'Using HashMap in concurrent code causes data corruption.',
+      fix:  'Use ConcurrentHashMap<> or synchronize access.' });
+  }
+
+  if (lang === 'java') {
+    var obRe = /i\s*<=\s*\w+\.size\(\)/g, obm;
+    while ((obm = obRe.exec(code)) !== null) {
+      issues.push({ type:'error', title:'Off-by-one error', line: lineOf(code, obm.index),
+        desc: 'Loop condition <= .size() causes ArrayIndexOutOfBoundsException.',
+        fix:  'Change <= to <' });
+    }
+  }
+
+  // Java NPE risk
+  if (lang === 'java') {
+    var npeRe = /\.get\s*\([^)]*\)\s*\./g, npem;
+    while ((npem = npeRe.exec(code)) !== null) {
+      issues.push({ type:'warn', title:'Potential NullPointerException', line: lineOf(code, npem.index),
+        desc: '.get() may return null; chaining without null-check throws NPE.',
+        fix:  'Check: Object v = map.get(k); if (v != null) v.doSomething();' });
+    }
+  }
+
+  // N+1 query
+  if (/N\+1|n\+1/.test(code)) {
+    issues.push({ type:'warn', title:'N+1 query pattern', line: 1,
+      desc: 'N+1 queries degrade performance severely at scale.',
+      fix:  'Use JOIN, eager loading, or DataLoader to batch.' });
+  }
+
+  var niRe = /\b(pass|raise\s+NotImplementedError|\/\/\s*not\s+implemented)\b/gi, nim;
+  while ((nim = niRe.exec(code)) !== null) {
+    issues.push({ type:'info', title:'Unimplemented stub', line: lineOf(code, nim.index),
+      desc: 'Placeholder code must be implemented before production.',
+      fix:  'Implement the method or add to your task tracker.' });
+  }
+
+  if (impCount > 0 && fnNames.length > 0) {
+    issues.push({ type:'good', title:'Modular structure',
+      desc: 'Uses imports and functions — good separation of concerns.', fix: '' });
+  }
+  if (clsNames.length > 0) {
+    issues.push({ type:'good', title:'Object-oriented design',
+      desc: clsNames.length + ' class' + (clsNames.length > 1 ? 'es' : '') + ' detected — promotes reuse.', fix: '' });
+  }
+  if (cmtCount > 0) {
+    issues.push({ type:'good', title:'Code is documented',
+      desc: 'Comments present — keep documenting complex logic.', fix: '' });
+  }
+
+  var errors   = issues.filter(function(i) { return i.type === 'error'; }).length;
+  var warns    = issues.filter(function(i) { return i.type === 'warn';  }).length;
+  var goods    = issues.filter(function(i) { return i.type === 'good';  }).length;
+  var infoCount = issues.filter(function(i) { return i.type === 'info'; }).length;
+  var score    = 100 - errors * 18 - warns * 6 + goods * 4;
+  score = Math.max(0, Math.min(100, score));
+
+  return {
+    lines: lines.length, nonBlank: nonBlank.length, blank: blank,
+    fnNames: fnNames, clsNames: clsNames, cmtCount: cmtCount,
+    impCount: impCount, avgLen: avgLen, maxD: maxD, cyclo: cyclo,
+    issues: issues, score: score,
+    errors: errors, warns: warns, infoCount: infoCount, goodCount: goods
+  };
+}
+
+
+function generatePredictions(code, lang) {
+  var preds = [];
+
+  function add(sev, title, desc, fix, line, conf) {
+    preds.push({ sev: sev, title: title, desc: desc, fix: fix,
+                 line: line || null, conf: conf || 75 });
+  }
+
+  if (lang === 'javascript' || lang === 'typescript') {
+    var chains = (code.match(/\w+\.\w+\.\w+/g) || []).length;
+    if (chains > 3 && code.indexOf('?.') === -1) {
+      add('error', 'Predicted: Null dereference crash',
+        'Deep property chains without optional chaining (?.). If any object is null/undefined at runtime, TypeError will be thrown.',
+        'Replace a.b.c with a?.b?.c', null, 88);
+    }
+  }
+
+  if (lang === 'javascript' || lang === 'typescript') {
+    var asyncCount = (code.match(/async\s+function|async\s+\w+\s*\(/g) || []).length;
+    var awaitCount = (code.match(/\bawait\b/g) || []).length;
+    if (asyncCount > awaitCount) {
+      add('error', 'Predicted: Unhandled Promise rejection',
+        asyncCount + ' async functions but only ' + awaitCount + ' await expressions. Missing await means Promise objects — not values — reach your logic.',
+        'Ensure every async call is awaited or .catch() chained.', null, 82);
+    }
+  }
+
+  if ((lang === 'javascript' || lang === 'typescript') && code.indexOf('innerHTML') !== -1) {
+    add('error', 'Predicted: XSS vulnerability',
+      'innerHTML with dynamic content allows injection of malicious scripts from user-controlled data.',
+      'Use textContent for plain text, or sanitize with DOMPurify.', null, 88);
+  }
+
+  if (lang === 'python') {
+    var idxAccess = (code.match(/\[\s*\d+\s*\]/g) || []).length;
+    if (idxAccess > 0 && code.indexOf('len(') === -1) {
+      add('error', 'Predicted: IndexError — list index out of range',
+        'Direct integer indexing without length validation. If list is shorter at runtime, IndexError is raised.',
+        'Guard: if len(lst) > idx: val = lst[idx]', null, 79);
+    }
+  }
+
+ 
+  if (lang === 'python') {
+    var fnCount  = (code.match(/def\s+\w+/g) || []).length;
+    var retCount = (code.match(/\breturn\b/g) || []).length;
+    if (fnCount > 1 && retCount < fnCount) {
+      add('warn', 'Predicted: Function returns None unexpectedly',
+        fnCount + ' functions but only ' + retCount + ' return statements. Functions without explicit return silently return None, causing AttributeError on the caller.',
+        'Ensure all code paths have an explicit return value.', null, 73);
+    }
+  }
+
+  if (lang === 'cpp') {
+    var hasDelete = (code.match(/\bdelete\b/g) || []).length;
+    var hasNew    = (code.match(/\bnew\s+\w/g)  || []).length;
+    if (hasDelete > 0 || hasNew > 1) {
+      add('error', 'Predicted: Use-after-free or double-free',
+        'Manual memory management detected. Without careful ownership tracking, pointers may be accessed after deletion or freed twice — both cause undefined behavior.',
+        'Use RAII: std::unique_ptr<T> or std::shared_ptr<T>.', null, 86);
+    }
+  }
+
+  if (lang === 'cpp' && code.indexOf('~') !== -1 && !code.match(/copy\s+constructor|operator=/)) {
+    add('error', 'Predicted: Rule-of-Three violation',
+      'Destructor defined but no copy constructor / copy-assignment operator. Compiler-generated shallow copy shares raw pointer — double-free on destruction.',
+      'Implement copy constructor and copy-assignment, or =delete them.', null, 87);
+  }
+
+  if (lang === 'go' && code.match(/go\s+func/)) {
+    if (code.indexOf('sync.Mutex') === -1 && code.indexOf('atomic') === -1 && code.indexOf('channel') === -1) {
+      add('error', 'Predicted: Data race condition',
+        'Goroutines share mutable state without synchronization. Go race detector (-race) will flag this. Races cause non-deterministic crashes.',
+        'Use sync.Mutex, sync/atomic, or channels to protect shared state.', null, 91);
+    }
+  }
+
+
+  if (lang === 'go') {
+    var errReturns = (code.match(/,\s*err\s*:?=/g) || []).length;
+    var errChecks  = (code.match(/if\s+err\s*!=\s*nil/g) || []).length;
+    if (errReturns > errChecks + 1) {
+      add('warn', 'Predicted: Unhandled error values',
+        errReturns + ' error returns but only ' + errChecks + ' nil-checks. Unchecked errors silently corrupt program state.',
+        'Always: if err != nil { return fmt.Errorf("ctx: %w", err) }', null, 81);
+    }
+  }
+
+  if (lang === 'java' && code.indexOf('HashMap') !== -1 &&
+      (code.indexOf('Thread') !== -1 || code.indexOf('synchronized') !== -1)) {
+    add('error', 'Predicted: ConcurrentModificationException',
+      'HashMap accessed in multi-threaded context. Concurrent modification throws ConcurrentModificationException.',
+      'Use ConcurrentHashMap<> or synchronize access.', null, 85);
+  }
+
+
+  if (lang === 'sql') {
+    var whereCount = (code.match(/WHERE\s+\w+/gi) || []).length;
+    if (whereCount > 2 && !code.match(/CREATE\s+INDEX/i)) {
+      add('warn', 'Predicted: Full table scan degradation',
+        whereCount + ' WHERE clauses but no CREATE INDEX statements. As data grows, queries degrade O(log n) → O(n).',
+        'Add indexes for WHERE/JOIN/ORDER BY columns.', null, 77);
+    }
+  }
+
+
+  if ((code.match(/new\s+RegExp\(.*\+/) || []).length > 0) {
+    add('warn', 'Predicted: RegExp catastrophic backtracking (ReDoS)',
+      'Dynamic regex with concatenation and quantifiers can cause exponential backtracking — effectively a denial-of-service.',
+      'Simplify regex, use non-capturing groups (?:...), or validate input length first.', null, 71);
+  }
+
+  
+  if (code.match(/req\.\w+\.body|request\.params|query\.\w+/g) &&
+      !code.match(/validate|sanitize|schema|zod|joi|yup/gi)) {
+    add('error', 'Predicted: Missing input validation',
+      'User input accessed from request without apparent validation. Invalid or malicious data reaches business logic.',
+      'Validate with zod, joi, express-validator, or class-validator.', null, 83);
+  }
+
+  return preds;
+}
+
+function buildGutterMap(issues) {
+  var map = {};
+  for (var i = 0; i < issues.length; i++) {
+    var iss = issues[i];
+    if (iss.line) {
+      if (!map[iss.line] || iss.type === 'error') map[iss.line] = iss;
+    }
+  }
+  return map;
+}
+
+
+function renderMinimap(code, gutterMap) {
+  var mm    = document.getElementById('minimap');
+  var cvs   = document.getElementById('mm-canvas');
+  var W     = mm.clientWidth || 76;
+  var LH    = 2.4;
+  var ls    = code.split('\n');
+  var H     = Math.max(ls.length * LH, 100);
+  cvs.width  = W;
+  cvs.height = H;
+  var ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  for (var i = 0; i < ls.length; i++) {
+    var y = i * LH;
+    var iss = gutterMap[i + 1];
+    if (iss) {
+      ctx.fillStyle = iss.type === 'error' ? 'rgba(255,77,109,.75)' : 'rgba(255,183,3,.55)';
+      ctx.fillRect(0, y, W, LH + 0.5);
+    }
+    var len = Math.min(ls[i].trim().length, W - 4) * 0.55;
+    if (len > 0) {
+      ctx.fillStyle = 'rgba(200,215,240,.1)';
+      ctx.fillRect(4, y + 0.4, len, 1.2);
+    }
+  }
+
+  var ed    = document.getElementById('code-editor');
+  var ratio = ed.scrollTop / Math.max(1, ed.scrollHeight - ed.clientHeight);
+  var vpH   = Math.max(18, (ed.clientHeight / Math.max(1, ed.scrollHeight)) * H);
+  var vpY   = ratio * (H - vpH);
+  var vp    = document.getElementById('mm-vp');
+  vp.style.top    = vpY + 'px';
+  vp.style.height = vpH + 'px';
+}
+
+function renderScore(score) {
+  var circ   = 194.8;
+  var offset = circ - (score / 100) * circ;
+  var ring   = document.getElementById('ring-fill');
+  ring.style.strokeDashoffset = offset;
+
+  var color, label, cls;
+  if (score >= 85)      { color = 'var(--lime)';  label = 'Excellent'; cls = 'chip-g'; }
+  else if (score >= 70) { color = '#22d3ee';       label = 'Good';      cls = 'chip-i'; }
+  else if (score >= 50) { color = 'var(--amber)';  label = 'Fair';      cls = 'chip-w'; }
+  else                  { color = 'var(--rose)';   label = 'Needs Work';cls = 'chip-e'; }
+
+  ring.style.stroke = color;
+  var rn = document.getElementById('ring-num');
+  rn.textContent = score;
+  rn.style.color = color;
+
+  var descs = {
+    'Excellent':  'Great quality! Minor refinements possible.',
+    'Good':       'Solid code with room for improvement.',
+    'Fair':       'Several issues detected. Prioritize fixes.',
+    'Needs Work': 'Critical issues found. Attention needed urgently.'
+  };
+  document.getElementById('score-desc').textContent = descs[label];
+
+  var sg = document.getElementById('score-grade');
+  sg.style.display = 'inline-flex';
+  sg.textContent   = label;
+  sg.className     = 'grade ' + cls;
+  sg.style.borderColor = 'currentColor';
+
+  document.getElementById('sb-score').textContent = 'Score: ' + score;
+}
+
+function setMetric(id, val, cls) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.className = 'mval' + (cls ? ' ' + cls : '');
+}
+
+function renderMetrics(r) {
+  setMetric('m-loc',   r.lines);
+  setMetric('m-blank', r.blank);
+  setMetric('m-fn',    r.fnNames.length,  r.fnNames.length > 20 ? 'warn' : 'ok');
+  setMetric('m-cls',   r.clsNames.length, r.clsNames.length > 0 ? 'ok' : '');
+  setMetric('m-cmt',   r.cmtCount,        r.cmtCount === 0 ? 'warn' : 'ok');
+  setMetric('m-imp',   r.impCount,        r.impCount > 0 ? 'ok' : '');
+  setMetric('m-avg',   r.avgLen + ' ch',  r.avgLen > 100 ? 'warn' : '');
+  setMetric('m-nest',  r.maxD,            r.maxD > 5 ? 'warn' : r.maxD > 2 ? '' : 'ok');
+}
+
+function renderChips(r) {
+  var el = document.getElementById('summary-chips');
+  var html = '';
+  if (r.errors > 0)    html += '<div class="chip chip-e">🔴 ' + r.errors + ' error' + (r.errors > 1 ? 's' : '') + '</div>';
+  if (r.warns > 0)     html += '<div class="chip chip-w">🟡 ' + r.warns + ' warning' + (r.warns > 1 ? 's' : '') + '</div>';
+  if (r.infoCount > 0) html += '<div class="chip chip-i">🔵 ' + r.infoCount + ' info</div>';
+  if (r.goodCount > 0) html += '<div class="chip chip-g">🟢 ' + r.goodCount + ' good</div>';
+  el.innerHTML = html;
+}
+
+function renderGutter(totalLines, gutterMap) {
+  var g    = document.getElementById('gutter');
+  var html = '';
+  var glyphs = { error: '●', warn: '▲', info: '◆', good: '✓' };
+  for (var i = 0; i < totalLines; i++) {
+    var iss = gutterMap[i + 1];
+    var cls = '', ico = '';
+    if (iss) {
+      cls = iss.type === 'error' ? ' err' : iss.type === 'warn' ? ' wrn' : ' inf';
+      ico = '<span class="gl-ico">' + (glyphs[iss.type] || '') + '</span>';
+    }
+    html += '<span class="gl' + cls + '">' + ico + (i + 1) + '</span>';
+  }
+  g.innerHTML = html;
+  g.scrollTop = document.getElementById('code-editor').scrollTop;
+}
+
+function renderPredictions(preds) {
+  var cnt   = document.getElementById('pred-cnt');
+  var list  = document.getElementById('predictions-list');
+  var ptab  = document.getElementById('ptab-predict');
+  var errN  = preds.filter(function(p) { return p.sev === 'error'; }).length;
+  cnt.textContent = preds.length;
+  if (errN > 0) ptab.classList.add('hot'); else ptab.classList.remove('hot');
+
+  if (!preds.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><p>No error predictions!<br/>Code looks structurally sound.</p></div>';
+    return;
+  }
+
+  var sevCol = { error: 'var(--rose)', warn: 'var(--amber)', info: 'var(--cyan)' };
+  function confColor(c) { return c >= 85 ? 'var(--rose)' : c >= 75 ? 'var(--amber)' : 'var(--lime)'; }
+
+  list.innerHTML = preds.map(function(p) {
+    var cc = confColor(p.conf);
+    var bg = cc.replace(')', ', .08)').replace('var(--', 'rgba(').replace('rose','255,77,109').replace('amber','255,183,3').replace('lime','57,211,83');
+    return '<div class="pred-item">' +
+      '<div class="pi-head">' +
+        '<div class="pi-sev" style="background:' + (sevCol[p.sev] || 'var(--muted)') + '"></div>' +
+        '<div class="pi-title">' + p.title + '</div>' +
+        '<div class="pi-conf" style="color:' + cc + ';border-color:' + cc + '">' + p.conf + '% likely</div>' +
+      '</div>' +
+      '<div class="pi-body">' + p.desc + (p.line ? '<div class="pi-loc">📍 Near line ' + p.line + '</div>' : '') + '</div>' +
+      (p.fix ? '<div class="pi-fix"><span class="fi-ico">🔧</span><span><strong>Fix:</strong> ' + p.fix + '</span></div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function renderIssues(issues) {
+  var cnt   = document.getElementById('iss-cnt');
+  var ptab  = document.getElementById('ptab-issues');
+  var list  = document.getElementById('issues-list');
+  var fr    = document.getElementById('filter-row');
+
+  var nonGood = issues.filter(function(i) { return i.type !== 'good'; });
+  cnt.textContent = nonGood.length;
+  if (issues.filter(function(i) { return i.type === 'error'; }).length > 0)
+    ptab.classList.add('hot'); else ptab.classList.remove('hot');
+
+  var types = [];
+  issues.forEach(function(i) { if (types.indexOf(i.type) === -1) types.push(i.type); });
+
+  var labels = { error: '🔴 Errors', warn: '🟡 Warnings', info: '🔵 Info', good: '🟢 Good' };
+  var fclss  = { error: 'fe', warn: 'fw', info: 'fi', good: 'fg' };
+
+  fr.innerHTML = '<button class="fbtn fa" data-f="all">All (' + issues.length + ')</button>' +
+    types.map(function(t) {
+      var n = issues.filter(function(i) { return i.type === t; }).length;
+      return '<button class="fbtn" data-f="' + t + '">' + (labels[t] || t) + ' (' + n + ')</button>';
+    }).join('');
+
+  var colors = { error:'var(--rose)', warn:'var(--amber)', info:'var(--cyan)', good:'var(--lime)' };
+  var icons  = { error:'🔴', warn:'🟡', info:'🔵', good:'🟢' };
+
+  function renderFiltered(filter) {
+    var filtered = filter === 'all' ? issues : issues.filter(function(i) { return i.type === filter; });
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><p>No issues in this category.</p></div>';
+      return;
+    }
+    list.innerHTML = filtered.map(function(iss) {
+      return '<div class="issue-item"><div class="issue-stripe">' +
+        '<div class="issue-bar" style="background:' + (colors[iss.type] || '#fff') + '"></div>' +
+        '<div class="issue-body">' +
+          '<div class="iss-head">' +
+            '<span class="iss-ico">' + (icons[iss.type] || '') + '</span>' +
+            '<span class="iss-title">' + iss.title + '</span>' +
+            (iss.line ? '<span class="iss-ln">Ln ' + iss.line + '</span>' : '') +
+          '</div>' +
+          '<div class="iss-desc">' + iss.desc + '</div>' +
+          (iss.fix ? '<div class="iss-fix">🔧 ' + iss.fix + '</div>' : '') +
+        '</div>' +
+      '</div></div>';
+    }).join('');
+  }
+
+  renderFiltered('all');
+
+  fr.querySelectorAll('.fbtn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      fr.querySelectorAll('.fbtn').forEach(function(b) {
+        b.className = 'fbtn';
+      });
+      var f   = btn.getAttribute('data-f');
+      var cls = f === 'all' ? 'fa' : (fclss[f] || '');
+      btn.className = 'fbtn ' + cls;
+      renderFiltered(f);
+    });
+  });
+}
+
+function renderStructure(r) {
+  var tree = document.getElementById('structure-tree');
+  if (!r.fnNames.length && !r.clsNames.length && !r.impCount) {
+    tree.innerHTML = '<div class="empty"><div class="empty-ico">🌲</div><p>No structural elements detected.</p></div>';
+    return;
+  }
+  var html = '';
+  if (r.impCount > 0) {
+    html += '<div class="tree-hdr">Dependencies (' + r.impCount + ')</div>' +
+      '<div class="tnode"><span class="tnode-ico">📦</span><span class="tnode-name">imports / requires</span><span class="ttag tg-imp">' + r.impCount + '</span></div>';
+  }
+  if (r.clsNames.length) {
+    html += '<div class="tree-hdr" style="margin-top:10px">Classes / Types (' + r.clsNames.length + ')</div>';
+    html += r.clsNames.map(function(n) {
+      return '<div class="tnode"><span class="tnode-ico">🏛</span><span class="tnode-name">' + n + '</span><span class="ttag tg-cls">class</span></div>';
+    }).join('');
+  }
+  if (r.fnNames.length) {
+    html += '<div class="tree-hdr" style="margin-top:10px">Functions / Methods (' + r.fnNames.length + ')</div>';
+    html += r.fnNames.map(function(n) {
+      return '<div class="tnode ind"><span class="tnode-ico">⚙</span><span class="tnode-name">' + n + '()</span><span class="ttag tg-fn">fn</span></div>';
+    }).join('');
+  }
+  tree.innerHTML = html;
+}
+
+function renderComplexity(r) {
+  var cx   = document.getElementById('complexity-content');
+  var cCol = r.cyclo < 10 ? 'var(--lime)' : r.cyclo < 20 ? 'var(--amber)' : 'var(--rose)';
+  var nCol = r.maxD  < 4  ? 'var(--lime)' : r.maxD  < 7  ? 'var(--amber)' : 'var(--rose)';
+  var lCol = 'var(--cyan)';
+  var fCol = 'var(--violet)';
+  var cmtPct = r.nonBlank > 0 ? Math.round(r.cmtCount / r.nonBlank * 100) : 0;
+
+  function bar(lbl, val, unit, w, col, desc) {
+    return '<div class="cx-card">' +
+      '<div class="cxlbl">' + lbl + '</div>' +
+      '<div class="cxval" style="color:' + col + '">' + val + '<span style="font-size:13px;opacity:.45"> ' + unit + '</span></div>' +
+      '<div class="cxsub">' + desc + '</div>' +
+      '<div class="cxbar-wrap"><div class="cxbar" style="width:' + w + '%;background:' + col + '"></div></div>' +
+    '</div>';
+  }
+
+  cx.innerHTML = '<div class="cx-grid">' +
+    bar('Cyclomatic Complexity', r.cyclo, '', Math.min(100,(r.cyclo/30)*100), cCol,
+        r.cyclo < 10 ? 'Easy to test' : r.cyclo < 20 ? 'Moderate — consider refactoring' : 'High — refactor urgently') +
+    bar('Max Nesting Depth', r.maxD, 'lvls', Math.min(100,(r.maxD/10)*100), nCol,
+        r.maxD < 4 ? 'Clean flow' : r.maxD < 7 ? 'Moderate nesting' : 'Too deep — extract logic') +
+    bar('Total Lines', r.lines, 'LOC', Math.min(100,(r.lines/500)*100), lCol,
+        r.lines < 200 ? 'Concise file' : r.lines < 500 ? 'Manageable size' : 'Large — consider splitting') +
+    bar('Functions', r.fnNames.length, 'fns', Math.min(100,(r.fnNames.length/30)*100), fCol,
+        r.fnNames.length === 0 ? 'No functions' : r.fnNames.length < 15 ? 'Good modularity' : 'Many — check cohesion') +
+    bar('Comment Ratio', cmtPct, '%', Math.min(100, cmtPct * 4), 'var(--amber)',
+        cmtPct === 0 ? 'No comments found' : cmtPct < 10 ? 'Low — add more docs' : 'Documented') +
+    bar('Blank Lines', r.blank, '', Math.min(100,(r.blank/Math.max(1,r.lines))*300), 'var(--muted)',
+        r.blank / Math.max(1, r.lines) > 0.3 ? 'Many blank lines' : 'Good spacing') +
+  '</div>';
+}
+
+
+var editor       = document.getElementById('code-editor');
+var debTimer     = null;
+var aiEnabled    = true;
+var currentLang  = 'javascript';
+var currentGutterMap = {};
+
+function updateLineNums() {
+  var n = editor.value.split('\n').length;
+  var g = document.getElementById('gutter');
+  var prev = parseInt(g.getAttribute('data-lines') || '0');
+  if (prev === n) return;
+  g.setAttribute('data-lines', n);
+  var html = '';
+  for (var i = 0; i < n; i++) html += '<span class="gl">' + (i + 1) + '</span>';
+  g.innerHTML = html;
+}
+
+function updateCursor() {
+  var val = editor.value.substring(0, editor.selectionStart);
+  var ln  = val.split('\n').length;
+  var col = val.split('\n').pop().length + 1;
+  document.getElementById('stat-ln').textContent  = ln;
+  document.getElementById('stat-col').textContent = col;
+}
+
+function runAnalysis(showOverlay) {
+  var code = editor.value.trim();
+  if (!code) return;
+
+  var sel = document.getElementById('lang-select').value;
+  currentLang = sel === 'auto' ? (detectLang(code) || 'text') : sel;
+
+  var db = document.getElementById('detected-badge');
+  var dt = document.getElementById('detected-text');
+  if (sel === 'auto') { db.classList.add('show'); dt.textContent = currentLang; }
+  else db.classList.remove('show');
+
+  var ov = document.getElementById('ov-loading');
+  if (showOverlay) ov.classList.add('show');
+
+  function doWork() {
+    var r     = analyzeCode(code, currentLang);
+    var preds = aiEnabled ? generatePredictions(code, currentLang) : [];
+    currentGutterMap = buildGutterMap(r.issues);
+
+    renderScore(r.score);
+    renderMetrics(r);
+    renderChips(r);
+    renderGutter(r.lines, currentGutterMap);
+    renderPredictions(preds);
+    renderIssues(r.issues);
+    renderStructure(r);
+    renderComplexity(r);
+    renderMinimap(code, currentGutterMap);
+
+    document.getElementById('sb-lang').textContent   = currentLang;
+    document.getElementById('sb-issues').textContent = r.errors + ' errors, ' + r.warns + ' warnings';
+    document.getElementById('sb-loc').textContent    = r.lines + ' lines';
+
+    var extMap = { javascript:'js', typescript:'ts', python:'py', java:'java',
+                   cpp:'cpp', c:'c', go:'go', rust:'rs', sql:'sql',
+                   html:'html', css:'css', bash:'sh', r:'r' };
+    var ext = extMap[currentLang] || 'txt';
+    var fn  = 'main.' + ext;
+    document.getElementById('crumb-file').textContent = fn;
+    document.getElementById('file-tab-name').innerHTML = '<div class="file-dot"></div>' + fn;
+
+    ov.classList.remove('show');
+  }
+
+  if (showOverlay) setTimeout(doWork, 380); else doWork();
+}
+
+editor.addEventListener('input', function() {
+  updateLineNums();
+  updateCursor();
+  clearTimeout(debTimer);
+  debTimer = setTimeout(function() { runAnalysis(false); }, 650);
+});
+
+editor.addEventListener('scroll', function() {
+  document.getElementById('gutter').scrollTop = editor.scrollTop;
+  renderMinimap(editor.value, currentGutterMap);
+});
+
+editor.addEventListener('keyup', updateCursor);
+editor.addEventListener('click', updateCursor);
+
+editor.addEventListener('keydown', function(e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    var s = editor.selectionStart, en = editor.selectionEnd;
+    editor.value = editor.value.substring(0, s) + '  ' + editor.value.substring(en);
+    editor.selectionStart = editor.selectionEnd = s + 2;
+    updateLineNums();
+  }
+});
+
+document.querySelectorAll('.ptab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.ptab').forEach(function(x) { x.classList.remove('active'); });
+    document.querySelectorAll('.pcontent').forEach(function(x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    var pc = document.getElementById('pc-' + t.getAttribute('data-p'));
+    if (pc) pc.classList.add('active');
+  });
+});
+
+document.getElementById('btn-analyze').addEventListener('click', function() { runAnalysis(true); });
+
+document.getElementById('btn-clear').addEventListener('click', function() {
+  editor.value = '';
+  updateLineNums();
+  currentGutterMap = {};
+
+  document.getElementById('ring-num').textContent = '—';
+  document.getElementById('ring-fill').style.strokeDashoffset = 194.8;
+  document.getElementById('ring-fill').style.stroke = '#39d353';
+  document.getElementById('score-desc').textContent = 'Paste code to begin analysis.';
+  document.getElementById('score-grade').style.display = 'none';
+
+  ['m-loc','m-fn','m-cls','m-cmt','m-imp','m-blank','m-avg','m-nest'].forEach(function(id) {
+    var el = document.getElementById(id); el.textContent = '—'; el.className = 'mval';
+  });
+
+  document.getElementById('summary-chips').innerHTML  = '';
+  document.getElementById('predictions-list').innerHTML = '<div class="empty"><div class="empty-ico">🔮</div><p>Run analysis to see predictions.</p></div>';
+  document.getElementById('issues-list').innerHTML    = '<div class="empty"><div class="empty-ico">🔍</div><p>No issues yet.</p></div>';
+  document.getElementById('filter-row').innerHTML     = '';
+  document.getElementById('structure-tree').innerHTML = '<div class="empty"><div class="empty-ico">🌲</div><p>Structure appears after analysis.</p></div>';
+  document.getElementById('complexity-content').innerHTML = '<div class="empty"><div class="empty-ico">📊</div><p>Complexity appears after analysis.</p></div>';
+  document.getElementById('gutter').innerHTML = '';
+  document.getElementById('detected-badge').classList.remove('show');
+  document.getElementById('sb-lang').textContent   = '—';
+  document.getElementById('sb-issues').textContent = '0 issues';
+  document.getElementById('sb-score').textContent  = 'Score: —';
+  document.getElementById('sb-loc').textContent    = '0 lines';
+  document.getElementById('pred-cnt').textContent  = '0';
+  document.getElementById('iss-cnt').textContent   = '0';
+});
+
+document.getElementById('ai-toggle').addEventListener('click', function() {
+  aiEnabled = !aiEnabled;
+  this.classList.toggle('on', aiEnabled);
+  if (editor.value.trim()) runAnalysis(false);
+});
+
+
+var sampleMap = {
+  's-js':   ['js',   'javascript'],
+  's-py':   ['py',   'python'],
+  's-java': ['java', 'java'],
+  's-cpp':  ['cpp',  'cpp'],
+  's-sql':  ['sql',  'sql'],
+  's-go':   ['go',   'go']
+};
+Object.keys(sampleMap).forEach(function(id) {
+  var entry = sampleMap[id];
+  var btn   = document.getElementById(id);
+  if (btn) {
+    btn.addEventListener('click', function() {
+      editor.value = SAMPLES[entry[0]];
+      document.getElementById('lang-select').value = entry[1];
+      updateLineNums();
+      runAnalysis(true);
+    });
+  }
+});
+
+document.getElementById('minimap').addEventListener('click', function(e) {
+  var rect  = this.getBoundingClientRect();
+  var ratio = (e.clientY - rect.top) / rect.height;
+  editor.scrollTop = ratio * (editor.scrollHeight - editor.clientHeight);
+});
+
+document.getElementById('gutter').addEventListener('mouseover', function(e) {
+  var span = e.target.closest('.err,.wrn,.inf');
+  if (!span) return;
+  var ln  = parseInt(span.textContent);
+  var iss = currentGutterMap[ln];
+  if (!iss) return;
+  var tt = document.getElementById('err-tooltip');
+  document.getElementById('ett-t').textContent = iss.title;
+  document.getElementById('ett-d').textContent = iss.desc;
+  var ef = document.getElementById('ett-f');
+  if (iss.fix) { ef.textContent = '🔧 ' + iss.fix; ef.style.display = 'block'; }
+  else ef.style.display = 'none';
+  var sr = span.getBoundingClientRect();
+  var cr = document.getElementById('editor-container').getBoundingClientRect();
+  tt.style.top = (sr.top - cr.top - 8) + 'px';
+  tt.classList.add('show');
+});
+document.getElementById('gutter').addEventListener('mouseout', function() {
+  document.getElementById('err-tooltip').classList.remove('show');
+});
+
+document.getElementById('gutter').addEventListener('mouseover', function(e) {
+  var span = e.target;
+  if (!span.classList.contains('gl')) return;
+  var ln = parseInt(span.textContent.replace(/[^0-9]/g,''));
+  var iss = currentGutterMap[ln];
+  if (!iss) return;
+  var tt = document.getElementById('err-tooltip');
+  document.getElementById('ett-t').textContent = iss.title;
+  document.getElementById('ett-d').textContent = iss.desc;
+  var ef = document.getElementById('ett-f');
+  if (iss.fix) { ef.textContent = '🔧 ' + iss.fix; ef.style.display = 'block'; }
+  else ef.style.display = 'none';
+  var sr = span.getBoundingClientRect();
+  var cr = document.getElementById('editor-container').getBoundingClientRect();
+  tt.style.top = Math.max(0, sr.top - cr.top - 4) + 'px';
+  tt.classList.add('show');
+});
+
+updateLineNums();
+updateCursor();
+
+setTimeout(function() {
+  editor.value = SAMPLES.js;
+  document.getElementById('lang-select').value = 'javascript';
+  updateLineNums();
+  runAnalysis(true);
+}, 250);
+</script>
+</body>
+</html>
